@@ -4,7 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const multer = require('multer');
 const path = require('path');
-const Multimedia = require('./models/Multimedia');
+const Multimedia = require('./models/multimedia');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
