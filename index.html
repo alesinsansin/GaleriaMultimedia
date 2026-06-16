@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galería Multimedia NoSQL</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+  <main class="contenedor">
+
+    <section class="hero">
+      <h1>Galería Multimedia NoSQL</h1>
+      <p>Sistema CRUD para guardar imágenes, audios y datos en MongoDB Atlas</p>
+    </section>
+
+    <section class="card">
+      <h2 id="tituloFormulario">Subir nuevo elemento</h2>
+
+      <form id="formMultimedia" enctype="multipart/form-data">
+
+        <input type="hidden" id="elementoId">
+
+        <label>Título del Elemento</label>
+        <input type="text" id="titulo" name="titulo" required>
+
+        <label>Descripción</label>
+        <textarea id="descripcion" name="descripcion"></textarea>
+
+        <label>Etiquetas</label>
+        <input
+          type="text"
+          id="tags"
+          name="tags"
+          placeholder="Ejemplo: música, paisaje, revolucionario"
+        >
+
+        <label>Seleccionar Imagen</label>
+        <input type="file" id="imagen" name="imagen" accept="image/*">
+
+        <label>Seleccionar Audio</label>
+        <input type="file" id="audio" name="audio" accept="audio/*">
+
+        <button type="submit" id="btnGuardar">
+          Guardar en la Nube
+        </button>
+
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Elementos guardados</h2>
+      <div id="galeria" class="galeria"></div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
