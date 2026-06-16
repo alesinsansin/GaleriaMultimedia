@@ -9,42 +9,52 @@ const Multimedia = require('./models/multimedia');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 
-// Crear carpeta uploads si no existe
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+const uploadsPath = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
 }
 
 // Configuración de Multer
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
+  destination: (req, file, cb) => cb(null, uploadsPath),
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const nombreSeguro = Date.now() + '-' + file.originalname.replace(/\s+/g, '_');
+    cb(null, nombreSeguro);
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024
+  }
+});
 
 // Middlewares
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsPath));
 app.use(express.static(__dirname));
 
-// Ruta principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Conexión a MongoDB Atlas
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(MONGO_URI)
   .then(() => console.log('Conectado a MongoDB Atlas'))
-  .catch(err => console.error('Error de conexión:', err));
+  .catch(err => console.error('Error de conexión:', err.message));
 
 // CREATE
-app.post(
-  '/api/multimedia',
-  upload.fields([{ name: 'imagen' }, { name: 'audio' }]),
-  async (req, res) => {
+app.post('/api/multimedia', (req, res) => {
+  upload.fields([{ name: 'imagen' }, { name: 'audio' }])(req, res, async (err) => {
+    if (err) {
+      console.error('Error de Multer:', err.message);
+      return res.status(500).json({ error: 'Error al subir archivo: ' + err.message });
+    }
+
     try {
       if (!req.files || !req.files.imagen || !req.files.audio) {
         return res.status(400).json({
@@ -70,10 +80,11 @@ app.post(
       });
 
     } catch (err) {
+      console.error('Error al guardar:', err.message);
       res.status(500).json({ error: err.message });
     }
-  }
-);
+  });
+});
 
 // READ
 app.get('/api/multimedia', async (req, res) => {
