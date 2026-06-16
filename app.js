@@ -1,89 +1,126 @@
 const API_URL = "/api/multimedia";
 
 async function cargarElementos() {
-  const res = await fetch(API_URL);
-  const datos = await res.json();
+  try {
+    const res = await fetch(API_URL);
+    const datos = await res.json();
 
-  const galeria = document.getElementById("galeria");
-  galeria.innerHTML = "";
+    if (!res.ok) {
+      alert("Error al cargar elementos: " + (datos.error || "Error desconocido"));
+      return;
+    }
 
-  datos.forEach(item => {
-    const tagsTexto = item.tags && item.tags.length > 0
-      ? item.tags.join(", ")
-      : "Sin etiquetas";
+    const galeria = document.getElementById("galeria");
+    galeria.innerHTML = "";
 
-    galeria.innerHTML += `
-      <div class="item">
-        <img src="${item.imagenUrl}" alt="${item.titulo}">
+    datos.forEach(item => {
+      const tagsTexto = item.tags && item.tags.length > 0
+        ? item.tags.join(", ")
+        : "Sin etiquetas";
 
-        <div class="item-content">
-          <h3>${item.titulo}</h3>
-          <p>${item.descripcion || "Sin descripción"}</p>
-          <p><b>Etiquetas:</b> ${tagsTexto}</p>
+      galeria.innerHTML += `
+        <div class="item">
+          <img src="${item.imagenUrl}" alt="${item.titulo}">
 
-          <audio controls>
-            <source src="${item.audioUrl}">
-            Tu navegador no soporta audio.
-          </audio>
+          <div class="item-content">
+            <h3>${item.titulo}</h3>
+            <p>${item.descripcion || "Sin descripción"}</p>
+            <p><b>Etiquetas:</b> ${tagsTexto}</p>
 
-          <div class="acciones">
-            <button class="btn-editar" onclick="editarElemento('${item._id}')">
-              Editar
-            </button>
+            <audio controls>
+              <source src="${item.audioUrl}">
+              Tu navegador no soporta audio.
+            </audio>
 
-            <button class="btn-eliminar" onclick="eliminarElemento('${item._id}')">
-              Eliminar
-            </button>
+            <div class="acciones">
+              <button class="btn-editar" onclick="editarElemento('${item._id}')">
+                Editar
+              </button>
+
+              <button class="btn-eliminar" onclick="eliminarElemento('${item._id}')">
+                Eliminar
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    `;
-  });
+      `;
+    });
+
+  } catch (error) {
+    alert("Error al cargar elementos: " + error.message);
+  }
 }
 
 document.getElementById("formMultimedia").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const id = document.getElementById("elementoId").value;
+  try {
+    const id = document.getElementById("elementoId").value;
 
-  if (id) {
-    const datos = {
-      titulo: document.getElementById("titulo").value,
-      descripcion: document.getElementById("descripcion").value,
-      tags: document.getElementById("tags").value
-        ? document.getElementById("tags").value.split(",").map(t => t.trim())
-        : []
-    };
+    let respuesta;
+    let data;
 
-    await fetch(`${API_URL}/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(datos)
-    });
+    if (id) {
+      const datos = {
+        titulo: document.getElementById("titulo").value,
+        descripcion: document.getElementById("descripcion").value,
+        tags: document.getElementById("tags").value
+          ? document.getElementById("tags").value.split(",").map(t => t.trim())
+          : []
+      };
 
-  } else {
-    const formData = new FormData();
+      respuesta = await fetch(`${API_URL}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(datos)
+      });
 
-    formData.append("titulo", document.getElementById("titulo").value);
-    formData.append("descripcion", document.getElementById("descripcion").value);
-    formData.append("tags", document.getElementById("tags").value);
-    formData.append("imagen", document.getElementById("imagen").files[0]);
-    formData.append("audio", document.getElementById("audio").files[0]);
+      data = await respuesta.json();
 
-    await fetch(API_URL, {
-      method: "POST",
-      body: formData
-    });
+    } else {
+      const imagen = document.getElementById("imagen").files[0];
+      const audio = document.getElementById("audio").files[0];
+
+      if (!imagen || !audio) {
+        alert("Debes seleccionar una imagen y un audio.");
+        return;
+      }
+
+      const formData = new FormData();
+
+      formData.append("titulo", document.getElementById("titulo").value);
+      formData.append("descripcion", document.getElementById("descripcion").value);
+      formData.append("tags", document.getElementById("tags").value);
+      formData.append("imagen", imagen);
+      formData.append("audio", audio);
+
+      respuesta = await fetch(API_URL, {
+        method: "POST",
+        body: formData
+      });
+
+      data = await respuesta.json();
+    }
+
+    if (!respuesta.ok) {
+      alert("Error al guardar: " + (data.error || "Error desconocido"));
+      return;
+    }
+
+    alert(data.mensaje || "Elemento guardado correctamente");
+
+    document.getElementById("formMultimedia").reset();
+    document.getElementById("elementoId").value = "";
+    document.getElementById("tituloFormulario").textContent = "Subir nuevo elemento";
+    document.getElementById("btnGuardar").textContent = "Guardar en la Nube";
+
+    cargarElementos();
+
+  } catch (error) {
+    alert("Error inesperado: " + error.message);
   }
-
-  document.getElementById("formMultimedia").reset();
-  document.getElementById("elementoId").value = "";
-  document.getElementById("tituloFormulario").textContent = "Subir nuevo elemento";
-  document.getElementById("btnGuardar").textContent = "Guardar en la Nube";
-
-  cargarElementos();
 });
 
 async function editarElemento(id) {
@@ -108,10 +145,18 @@ async function editarElemento(id) {
 
 async function eliminarElemento(id) {
   if (confirm("¿Deseas eliminar este elemento?")) {
-    await fetch(`${API_URL}/${id}`, {
+    const res = await fetch(`${API_URL}/${id}`, {
       method: "DELETE"
     });
 
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Error al eliminar: " + (data.error || "Error desconocido"));
+      return;
+    }
+
+    alert(data.mensaje);
     cargarElementos();
   }
 }
